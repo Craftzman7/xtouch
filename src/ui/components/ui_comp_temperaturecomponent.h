@@ -62,6 +62,7 @@ extern "C"
     void ui_event_comp_temperatureComponent_numpadKey(lv_event_t *e);
     void ui_event_comp_temperatureComponent_numpadKeyBack(lv_event_t *e);
     void ui_event_comp_temperatureComponent_numpadKeyOk(lv_event_t *e);
+#define UI_COMP_KEYBOARD_NUMPADKEYBACK 38
 
 #ifdef __cplusplus
 } /*extern "C"*/

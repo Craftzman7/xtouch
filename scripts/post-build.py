@@ -131,7 +131,7 @@ def post_build_merge_bin(version):
 
     web_usb_fw = f"../../../../xtouch-bin/webusb/xtouch.web.{version}.bin"
     esptool_cmd = [
-        'esptool.py',
+        'esptool',
         '--chip', 'ESP32',
         'merge_bin',
         '-o', web_usb_fw,
@@ -142,7 +142,9 @@ def post_build_merge_bin(version):
         '0x10000', 'firmware.bin'
     ]
 
-    subprocess.run(esptool_cmd, cwd="./.pio/build/esp32dev")
+    esptool_cmd = subprocess.run(esptool_cmd, cwd="./.pio/build/esp32dev")
+    # Print the output of the command
+    print(esptool_cmd.stdout)
 
 
 def post_build_action(source, target, env):
@@ -151,14 +153,14 @@ def post_build_action(source, target, env):
         version_data = json.load(version_file)
         version_value = version_data.get("version", "UNKNOWN")
 
-    delete_bin_files("../xtouch-bin/ota")
-    delete_bin_files("../xtouch-bin/webusb")
-    post_build_manifest(version_value)
-    post_build_copy_ota_fw(version_value)
-    post_build_create_ota_json(version_value)
+    # delete_bin_files("../xtouch-bin/ota")
+    # delete_bin_files("../xtouch-bin/webusb")
+    # post_build_manifest(version_value)
+    # post_build_copy_ota_fw(version_value)
+    # post_build_create_ota_json(version_value)
     post_build_merge_bin(version_value)
 
-    post_build_increment_semver("version.json", bump_type="patch")
+    # post_build_increment_semver("version.json", bump_type="patch")
     print(f"XTOUCH POSTBUILD")
 
 

@@ -10,6 +10,9 @@ void xtouch_settings_save(bool onlyRoot = false)
     doc["ota"] = xTouchConfig.xTouchOTAEnabled;
     doc["wop"] = xTouchConfig.xTouchWakeOnPrint;
     doc["chamberTempDiff"] = xTouchConfig.xTouchChamberSensorReadingDiff;
+    doc["accessCode"] = xTouchConfig.xTouchAccessCode;
+    doc["IPAddress"] = xTouchConfig.xTouchIPAddress;
+    doc["serial"] = xTouchConfig.xTouchSerialNumber;
 
     xtouch_filesystem_writeJson(SD, xtouch_paths_settings, doc);
 
@@ -39,6 +42,9 @@ void xtouch_settings_loadSettings()
         xTouchConfig.xTouchOTAEnabled = false;
         xTouchConfig.xTouchWakeOnPrint = true;
         xTouchConfig.xTouchChamberSensorReadingDiff = 0;
+        strcpy(xTouchConfig.xTouchAccessCode, "00000000");
+        strcpy(xTouchConfig.xTouchIPAddress, "0.0.0.0");
+        strcpy(xTouchConfig.xTouchSerialNumber, "unset");
         xtouch_settings_save(true);
     }
 
@@ -50,6 +56,9 @@ void xtouch_settings_loadSettings()
     xTouchConfig.xTouchOTAEnabled = settings.containsKey("ota") ? settings["ota"].as<bool>() : false;
     xTouchConfig.xTouchWakeOnPrint = settings.containsKey("wop") ? settings["wop"].as<bool>() : true;
     xTouchConfig.xTouchChamberSensorReadingDiff = settings.containsKey("chamberTempDiff") ? settings["chamberTempDiff"].as<int8_t>() : 0;
+    strcpy(xTouchConfig.xTouchAccessCode, settings.containsKey("accessCode") ? settings["accessCode"].as<const char *>() : "000000");
+    strcpy(xTouchConfig.xTouchIPAddress, settings.containsKey("IPAddress") ? settings["IPAddress"].as<const char *>() : "0.0.0.0");
+    strcpy(xTouchConfig.xTouchSerialNumber, settings.containsKey("serial") ? settings["serial"].as<const char *>() : "unset");
 
     if (cloud.isPaired())
     {

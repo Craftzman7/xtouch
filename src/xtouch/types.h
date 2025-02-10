@@ -150,6 +150,7 @@ extern "C"
         bool xTouchTFTFlip;
         bool xTouchTFTInvert;
         char xTouchAccessCode[9];
+        char xTouchIPAddress[17];
         char xTouchSerialNumber[16];
         char xTouchPrinterModel[32];
         char xTouchPrinterName[32];

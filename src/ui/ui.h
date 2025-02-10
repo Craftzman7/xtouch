@@ -52,6 +52,7 @@ extern "C"
   lv_obj_t *ui_accessCodeScreen;
   lv_obj_t *ui_accessCodeScreenKeyboard;
   lv_obj_t *ui_accessCodeInput;
+  lv_obj_t *ui_accessCodeIPAddressInput;
   lv_obj_t *ui_printerPairScreen;
   lv_obj_t *ui_temperatureComponent;
   lv_obj_t *ui_controlScreen;

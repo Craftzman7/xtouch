@@ -8,6 +8,7 @@
 #include "ui/ui_msgs.h"
 #include "types.h"
 #include "autogrowstream.h"
+#include "filesystem.h"
 #include "bbl-certs.h"
 // #include "xtouch/ams-status.hpp"
 #include "xtouch/cloud.hpp"
@@ -28,7 +29,8 @@ String xtouch_mqtt_report_topic;
 /* ---------------------------------------------- */
 bool xtouch_mqtt_firstConnectionDone = false;
 int xtouch_mqtt_connection_timeout_count = 5;
-int xtouch_mqtt_connection_fail_count = 5;
+int xtouch_mqtt_connection_fail_count = 2;
+bool hasFinishedLanSetup = false;
 unsigned long long xtouch_mqtt_lastPushStatus = 0;
 
 XtouchAutoGrowBufferStream stream;
@@ -731,7 +733,7 @@ void xtouch_mqtt_connect()
 
     if (!xtouch_mqtt_firstConnectionDone)
     {
-        lv_label_set_text(introScreenCaption, LV_SYMBOL_CHARGE " Connecting to Cloud MQTT");
+        lv_label_set_text(introScreenCaption, LV_SYMBOL_CHARGE " Retrying MQTT connection ...");
         lv_timer_handler();
         lv_task_handler();
         delay(32);
@@ -742,7 +744,7 @@ void xtouch_mqtt_connect()
     while (!xtouch_pubSubClient.connected())
     {
         String clientId = "XTOUCH-CLIENT-" + String(xtouch_mqtt_generateRandomKey(16));
-        if (xtouch_pubSubClient.connect(clientId.c_str(), cloud.getUsername().c_str(), cloud.getAuthToken().c_str()))
+        if (xtouch_pubSubClient.connect(clientId.c_str(), "bblp", xTouchConfig.xTouchAccessCode))
         {
             ConsoleInfo.println(F("[XTouch][MQTT] ---- CONNECTED ----"));
 
@@ -768,22 +770,56 @@ void xtouch_mqtt_connect()
                 }
                 break;
             case -2: // MQTT_CONNECT_FAILED
+                if (strcmp(xTouchConfig.xTouchAccessCode, "00000000") == 0)
+                {
+                    lv_label_set_text(introScreenCaption, LV_SYMBOL_WARNING " Access Code not set.");
+                    lv_timer_handler();
+                    lv_task_handler();
+                    delay(3000);
+                    lv_label_set_text(introScreenCaption, LV_SYMBOL_WARNING " Please edit xtouch/settings.json");
+                    lv_timer_handler();
+                    lv_task_handler();
+                    delay(4000);
+                    lv_label_set_text(introScreenCaption, LV_SYMBOL_REFRESH " REBOOTING");
+                    lv_timer_handler();
+                    lv_task_handler();
+                    ESP.restart();
+                    break;
+                } 
+                else if (strcmp(xTouchConfig.xTouchIPAddress, "0.0.0.0") == 0) 
+                {
+                    Serial.println(xTouchConfig.xTouchIPAddress);
+                    lv_label_set_text(introScreenCaption, LV_SYMBOL_WARNING " IP Address not set.");
+                    lv_timer_handler();
+                    lv_task_handler();
+                    delay(3000);
+                    lv_label_set_text(introScreenCaption, LV_SYMBOL_WARNING " Please edit xtouch/settings.json");
+                    lv_timer_handler();
+                    lv_task_handler();
+                    delay(4000);
+                    lv_label_set_text(introScreenCaption, LV_SYMBOL_REFRESH " REBOOTING");
+                    lv_timer_handler();
+                    lv_task_handler();
+                    ESP.restart();
+                    break;
+                }
 
                 if (!xtouch_mqtt_firstConnectionDone)
                 {
                     xtouch_mqtt_connection_fail_count--;
                     if (xtouch_mqtt_connection_fail_count == 0)
                     {
-                        if (!xtouch_mqtt_firstConnectionDone)
-                        {
-                            lv_label_set_text(introScreenCaption, LV_SYMBOL_WARNING " MQTT ERROR");
-                            lv_timer_handler();
-                            lv_task_handler();
-                            delay(3000);
-                            lv_label_set_text(introScreenCaption, LV_SYMBOL_REFRESH " REBOOTING");
-                            lv_timer_handler();
-                            lv_task_handler();
-                        }
+                        lv_label_set_text(introScreenCaption, LV_SYMBOL_WARNING " MQTT Error.");
+                        lv_timer_handler();
+                        lv_task_handler();
+                        delay(4000);
+                        lv_label_set_text(introScreenCaption, LV_SYMBOL_WARNING " Check your access code and IP.");
+                        lv_timer_handler();
+                        lv_task_handler();
+                        delay(5000);
+                        lv_label_set_text(introScreenCaption, LV_SYMBOL_REFRESH " REBOOTING");
+                        lv_timer_handler();
+                        lv_task_handler();
                         ESP.restart();
                     }
                 }
@@ -799,7 +835,7 @@ void xtouch_mqtt_connect()
             case 5: // MQTT UNAUTHORIZED
                 if (!xtouch_mqtt_firstConnectionDone)
                 {
-                    lv_label_set_text(introScreenCaption, LV_SYMBOL_WARNING " MQTT ERROR");
+                    lv_label_set_text(introScreenCaption, LV_SYMBOL_WARNING " Auth error. Check access code.");
                     lv_timer_handler();
                     lv_task_handler();
                     delay(3000);
@@ -807,9 +843,6 @@ void xtouch_mqtt_connect()
                     lv_timer_handler();
                     lv_task_handler();
                 }
-                cloud.clearDeviceList();
-                cloud.clearPairList();
-                cloud.clearTokens();
                 ESP.restart();
 
                 break;
@@ -823,10 +856,22 @@ void xtouch_mqtt_connect()
 
 void xtouch_mqtt_setup()
 {
-    lv_label_set_text(introScreenCaption, LV_SYMBOL_CHARGE " Connecting BBL Cloud");
+    lv_label_set_text(introScreenCaption, LV_SYMBOL_CHARGE " Connecting to your printer");
     lv_timer_handler();
     lv_task_handler();
     delay(32);
+
+    if (strcmp(xTouchConfig.xTouchSerialNumber, "unset") == 0)
+    {
+        lv_label_set_text(introScreenCaption, LV_SYMBOL_WARNING " SN not set. Edit xtouch/settings.json");
+        lv_timer_handler();
+        lv_task_handler();
+        delay(3000);
+        lv_label_set_text(introScreenCaption, LV_SYMBOL_REFRESH " REBOOTING");
+        lv_timer_handler();
+        lv_task_handler();
+        delay(4000);
+    }
 
     xtouch_mqtt_topic_setup();
 
@@ -836,7 +881,7 @@ void xtouch_mqtt_setup()
     // xtouch_wiFiClientSecure.setCACert(cloud.getRegion() == "China" ? cn_mqtt_bambulab_com : us_mqtt_bambulab_com);
     xtouch_wiFiClientSecure.setInsecure();
 
-    xtouch_pubSubClient.setServer(cloud.getMqttCloudHost(), 8883);
+    xtouch_pubSubClient.setServer(xTouchConfig.xTouchIPAddress, 8883);
     xtouch_pubSubClient.setBufferSize(2048); // 2KB for mqtt message JWT output
     xtouch_pubSubClient.setStream(stream);
     xtouch_pubSubClient.setCallback(xtouch_pubSubClient_streamCallback);
@@ -882,6 +927,47 @@ void xtouch_mqtt_loop()
         return;
     }
     delay(10);
+}
+
+/// UNUSED ///
+
+bool has_lan_config()
+{
+    // Check if access code pointers are valid
+    if (xTouchConfig.xTouchIPAddress == nullptr || xTouchConfig.xTouchAccessCode == nullptr) {
+        return false;
+    }
+    // Copy into temporary buffers to ensure null termination.
+    char ip[17];
+    strncpy(ip, xTouchConfig.xTouchIPAddress, 16);
+    ip[16] = '\0';
+    char code[7];
+    strncpy(code, xTouchConfig.xTouchAccessCode, 6);
+    code[6] = '\0';
+    // Read settings file and check if the IP address is not 0.0.0.0
+    if ((strcmp(ip, "0.0.0.0") == 0) || (strcmp(code, "000000") == 0)) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
+bool xtouch_lan_setup()
+{
+    if (has_lan_config())
+    {
+        Serial.println("LAN Config exists, skipping setup");
+        return true;
+    } else {
+        Serial.println("LAN Config not found, initializing setup");
+        loadScreen(6);
+        lv_timer_handler();
+        lv_task_handler();
+        while(!has_lan_config()) {
+            delay(100);
+        }
+        return false;
+    }
 }
 
 #endif
